@@ -180,6 +180,32 @@ class Connection(weedb.Connection):
         return table_list
 
     @guard
+    def get_unit_system(self):
+        """Get the unit system from the metadata measurement"""
+        import sys
+        try:
+            # Query to get the most recent unit system value
+            query = f'''
+            from(bucket: "{self.bucket}")
+              |> range(start: -30d)
+              |> filter(fn: (r) => r._measurement == "weewx_metadata")
+              |> filter(fn: (r) => r.type == "unit_system")
+              |> last()
+            '''
+            result = self.query_api.query(query=query, org=self.org)
+            
+            if result and len(result) > 0 and len(result[0].records) > 0:
+                unit_system = result[0].records[0].values.get('_value')
+                print(f"DEBUG: Found unit system in metadata: {unit_system}", file=sys.stderr)
+                return unit_system
+            else:
+                print(f"DEBUG: No unit system found in metadata, using default (1)", file=sys.stderr)
+                return 1  # Default to US units (0x01)
+        except Exception as e:
+            print(f"DEBUG: Error getting unit system: {e}, using default (1)", file=sys.stderr)
+            return 1  # Default to US units (0x01) on error
+        
+    @guard
     def genSchemaOf(self, measurement):
         """Return a summary of the schema of the specified measurement.
         
@@ -285,6 +311,11 @@ class Connection(weedb.Connection):
     def has_math(self):
         """Returns True if the database supports math functions such as cos() and sin()."""
         return True
+        
+    @property
+    def std_unit_system(self):
+        """Return the unit system in use by this database."""
+        return self.get_unit_system()
 
     @guard
     def begin(self):
@@ -402,6 +433,25 @@ class Cursor(weedb.Cursor):
         # Special handling for dateTime column which becomes the timestamp in InfluxDB
         timestamp = None
         
+        # Check if we're creating an initial record with unit system info
+        if measurement.lower() == 'archive' and 'usunits' in [col.lower() for col in columns]:
+            # Store the unit system in the database using a special write
+            usunits_index = next((i for i, col in enumerate(columns) if col.lower() == 'usunits'), None)
+            if usunits_index is not None:
+                usunits_value = sql_tuple[usunits_index]
+                print(f"DEBUG: Setting unit system to: {usunits_value}", file=sys.stderr)
+                
+                # Write a special record for unit system tracking
+                unit_point = Point('weewx_metadata')
+                unit_point = unit_point.tag('type', 'unit_system')
+                unit_point = unit_point.field('value', usunits_value)
+                
+                try:
+                    self.write_api.write(bucket=self.bucket, org=self.org, record=unit_point)
+                    print(f"DEBUG: Successfully stored unit system metadata", file=sys.stderr)
+                except Exception as e:
+                    print(f"DEBUG: Error storing unit system metadata: {e}", file=sys.stderr)
+        
         # Map columns to values and add them to the point
         for i, column in enumerate(columns):
             column = column.strip()
@@ -420,9 +470,14 @@ class Cursor(weedb.Cursor):
                     timestamp = value
                     print(f"DEBUG: Using dateTime as timestamp (non-numeric): {timestamp}", file=sys.stderr)
             # Special handling for known metadata fields that should be tags, not fields
-            elif column.lower() in ('station', 'station_type', 'usunits', 'interval'):
+            elif column.lower() in ('station', 'station_type', 'usunits'):
                 point = point.tag(column, str(value))
                 print(f"DEBUG: Added tag: {column} = {value}", file=sys.stderr)
+            # Special handling for interval - add as both tag and field for compatibility
+            elif column.lower() == 'interval':
+                point = point.tag(column, str(value))
+                point = point.field(column, value)
+                print(f"DEBUG: Added interval as both tag and field: {value}", file=sys.stderr)
             else:
                 # All other values go into fields
                 try:
@@ -656,7 +711,37 @@ class Cursor(weedb.Cursor):
                     # Add all field values, skipping internal fields that start with _
                     for field in sorted(record.values.keys()):
                         if field not in ('_time', '_measurement', '_field', '_value', 'result', 'table') and not field.startswith('_'):
-                            values.append(record.values.get(field))
+                            value = record.values.get(field)
+                            # Convert known numeric string values to their appropriate type
+                            if field.lower() == 'interval' and isinstance(value, str) and value.isdigit():
+                                value = int(value)
+                            elif field.lower() == 'usunits' and isinstance(value, str) and value.isdigit():
+                                value = int(value)
+                            values.append(value)
+                    
+                    # Ensure essential fields like interval are included
+                    # This handles the case where interval might be stored as a tag and not a field
+                    if 'interval' in record.values and record.values['interval'] not in values:
+                        values.append(record.values['interval'])
+                    # Check for interval in tags (which are not included in record.values by default)
+                    elif hasattr(record, 'values') and record.values.get('_measurement') == 'archive' and 'interval' not in record.values:
+                        # Try to get interval from tags if available
+                        interval_value = None
+                        try:
+                            interval_value = record.values.get('interval')
+                        except:
+                            pass
+                        
+                        if interval_value is not None:
+                            # Convert to int if it's a string
+                            if isinstance(interval_value, str) and interval_value.isdigit():
+                                interval_value = int(interval_value)
+                            values.append(interval_value)
+                        else:
+                            # Add a default interval value of 5 minutes (300 seconds) if not found
+                            import sys
+                            print(f"DEBUG: Adding default interval value for record", file=sys.stderr)
+                            values.append(5)
                     
                     # Add _value field which contains the actual measurement value in InfluxDB
                     if '_value' in record.values:
@@ -728,3 +813,17 @@ class Cursor(weedb.Cursor):
 
     def __exit__(self, etyp, einst, etb):
         self.close()
+        
+    def __iter__(self):
+        """Make the cursor iterable."""
+        # Handle special results
+        if hasattr(self, '_special_result'):
+            for record in self._special_result:
+                yield record
+            return
+            
+        # Return an iterator that yields each record
+        record = self.fetchone()
+        while record is not None:
+            yield record
+            record = self.fetchone()

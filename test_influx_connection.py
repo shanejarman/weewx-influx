@@ -26,7 +26,7 @@ def test_connection():
         'host': 'localhost',
         'port': 8086,
         'org': 'weewx',
-        'token': 'aXwGB3kJzQgfRD9f1ibYcsmGbmj-9DExYoK_rbbqf2yS5DgbRTNR-kHC8SPOzr9Blfs5rrAMIOsvFMvOl0dA_A==',
+        'token': '4hpJnz8A4fiH3oToXOWehFkAcdtIH-3sA7doosxvTf7iqViV0u6Q0uwinqqSA02JqFMSfzRpPF9F0tY14o8trQ==',
         'bucket': 'weather_data'
     }
     
