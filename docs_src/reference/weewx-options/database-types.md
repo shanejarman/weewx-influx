@@ -90,3 +90,62 @@ Default is `3306`.
 
 The type of MySQL database storage engine to be used. This should not be
 changed without a good reason. Default is `INNODB`.
+
+## [[InfluxDB]]
+
+This section defines default values for InfluxDB databases. They can be
+overridden by individual databases.
+
+!!! Note 
+    If you choose the [InfluxDB](https://www.influxdata.com/) database, it is assumed
+    that you know how to administer it. In particular, you will need to have an 
+    InfluxDB instance running and configured with an organization and a token
+    with appropriate permissions.
+
+!!! Tip
+    You'll need to install the InfluxDB client library before using this driver:
+    ```shell
+    pip install influxdb-client
+    ```
+
+#### driver
+
+The InfluxDB driver name. Required.
+
+#### host
+
+The name of the server on which the InfluxDB instance is located.
+
+Default is `localhost`.
+
+#### port
+
+The port number to be used.
+
+Optional.
+
+Default is `8086`.
+
+#### protocol
+
+The protocol to use for connecting to the InfluxDB server.
+
+Default is `http`.
+
+#### org
+
+The InfluxDB organization name.
+
+Required.
+
+#### token
+
+The authentication token for accessing the InfluxDB server.
+
+Required.
+
+#### bucket
+
+The InfluxDB bucket name (equivalent to a database name in traditional SQL databases).
+
+Required.

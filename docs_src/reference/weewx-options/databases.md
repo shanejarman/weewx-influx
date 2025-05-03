@@ -42,3 +42,19 @@ go with type `MySQL` are defined in section
 
 The name of the database. Default is `weewx`.
 
+## [[archive_influxdb]]
+
+This definition uses the InfluxDB database engine to store data. InfluxDB is a purpose-built
+time-series database that can be useful for storing and analyzing large amounts of weather data.
+
+#### database_type
+
+Set to `InfluxDB` to signal that this is an InfluxDB database. The definitions that
+go with type `InfluxDB` are defined in section
+[`[DatabaseTypes] / [[InfluxDB]]`](database-types.md#influxdb).
+
+#### bucket
+
+The InfluxDB bucket name to use. This is equivalent to a database name in traditional 
+SQL databases. Required.
+
