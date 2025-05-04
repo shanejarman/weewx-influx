@@ -30,3 +30,4 @@ src/weewx_data/archive/
 src/weewx_data/public_html/
 
 weewx-venv/
+live-configs/
