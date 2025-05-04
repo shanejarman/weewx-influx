@@ -67,7 +67,7 @@ services:
       - DOCKER_INFLUXDB_INIT_PASSWORD=your_password
       - DOCKER_INFLUXDB_INIT_ORG=weewx
       - DOCKER_INFLUXDB_INIT_BUCKET=weather_data
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=your_token
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=your_secret_token
     restart: unless-stopped
 
 volumes:
@@ -91,7 +91,7 @@ You can verify InfluxDB is running correctly using several methods:
 
 ### Method 1: Check the container logs
 ```bash
-docker logs influxdb
+docker logs influxdb-influxdb-1
 ```
 Look for messages indicating the server started successfully like "Listening on...".
 
@@ -154,7 +154,7 @@ influx ping --host http://localhost:8086
 ```bash
 # Replace YOUR_TOKEN with your actual token
 curl -G "http://localhost:8086/api/v2/query?org=weewx" \
-  --header "Authorization: Token YOUR_TOKEN" \
+  --header "Authorization: Token your_secret_token" \
   --header "Content-Type: application/vnd.flux" \
   --data-urlencode "query=from(bucket:\"weather_data\") |> range(start: -1h) |> limit(n:5)"
 ```

@@ -21,14 +21,20 @@ def test_connection():
     
     print("Testing InfluxDB connection...")
     
-    # Connection parameters
+    # Connection parameters - use environment variables with fallbacks
     connection_params = {
-        'host': 'localhost',
-        'port': 8086,
-        'org': 'weewx',
-        'token': '4hpJnz8A4fiH3oToXOWehFkAcdtIH-3sA7doosxvTf7iqViV0u6Q0uwinqqSA02JqFMSfzRpPF9F0tY14o8trQ==',
-        'bucket': 'weather_data'
+        'host': os.environ.get('INFLUXDB_HOST', 'localhost'),
+        'port': int(os.environ.get('INFLUXDB_PORT', '8086')),
+        'org': os.environ.get('INFLUXDB_ORG', 'weewx'),
+        'token': os.environ.get('INFLUXDB_TOKEN', ''),  # Token should be provided as an environment variable
+        'bucket': os.environ.get('INFLUXDB_BUCKET', 'weather_data')
     }
+    
+    # Check if token is set
+    if not connection_params['token']:
+        print("ERROR: INFLUXDB_TOKEN environment variable not set")
+        print("Please set it using: export INFLUXDB_TOKEN='your-token-here'")
+        return False
     
     try:
         # Try to connect
