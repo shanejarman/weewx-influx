@@ -302,6 +302,7 @@ class Manager:
         # has never been used, then the unit system is still indeterminate --- set it to 'None'.
         _row = self.getSql("SELECT usUnits FROM %s LIMIT 1;" % self.table_name)
         self.std_unit_system = _row[0] if _row is not None else None
+        print(f"DEBUG: _create_sync: std_unit_system: {self.std_unit_system}", file=sys.stderr)
 
         # Cache the first and last timestamps
         self.first_timestamp = self.firstGoodStamp()
@@ -430,6 +431,7 @@ class Manager:
                 log.error("Archive record with null time encountered")
             raise weewx.ViolatedPrecondition("Manager record with null time encountered.")
 
+        print(f"DEBUG: Adding record with unit system: {record['usUnits']}", file=sys.stderr)
         # Check to make sure the incoming record is in the same unit system as the records already
         # in the database:
         self._check_unit_system(record['usUnits'])
@@ -677,6 +679,7 @@ class Manager:
         """Check to make sure a unit system is the same as what's already in use in the database.
         """
 
+        print(f"DEBUG: Checking unit system: {unit_system} | std unit system: {self.std_unit_system}", file=sys.stderr)
         if self.std_unit_system is not None:
             if unit_system != self.std_unit_system:
                 raise weewx.UnitError("Unit system of incoming record (0x%02x) "

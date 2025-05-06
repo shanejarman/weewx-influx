@@ -448,7 +448,7 @@ class Cursor(weedb.Cursor):
                 
                 try:
                     self.write_api.write(bucket=self.bucket, org=self.org, record=unit_point)
-                    print(f"DEBUG: Successfully stored unit system metadata", file=sys.stderr)
+                    print(f"DEBUG: Successfully stored unit system metadata: {usunits_value}", file=sys.stderr)
                 except Exception as e:
                     print(f"DEBUG: Error storing unit system metadata: {e}", file=sys.stderr)
         
@@ -470,9 +470,14 @@ class Cursor(weedb.Cursor):
                     timestamp = value
                     print(f"DEBUG: Using dateTime as timestamp (non-numeric): {timestamp}", file=sys.stderr)
             # Special handling for known metadata fields that should be tags, not fields
-            elif column.lower() in ('station', 'station_type', 'usunits'):
+            elif column.lower() in ('station', 'station_type'):
                 point = point.tag(column, str(value))
                 print(f"DEBUG: Added tag: {column} = {value}", file=sys.stderr)
+            # Special handling for usUnits - add as both tag and field for improved compatibility
+            elif column.lower() == 'usunits':
+                point = point.tag(column, str(value))
+                point = point.field(column, value)
+                print(f"DEBUG: Added usUnits as both tag and field: {value}", file=sys.stderr)
             # Special handling for interval - add as both tag and field for compatibility
             elif column.lower() == 'interval':
                 point = point.tag(column, str(value))
