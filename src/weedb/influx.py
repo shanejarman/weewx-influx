@@ -196,6 +196,14 @@ class Connection(weedb.Connection):
             
             if result and len(result) > 0 and len(result[0].records) > 0:
                 unit_system = result[0].records[0].values.get('_value')
+                # FIXME: this is hacky, but it works for now
+                # Make sure it's an integer, not a string or timestamp
+                if isinstance(unit_system, str) and unit_system.isdigit():
+                    unit_system = int(unit_system)
+                elif not isinstance(unit_system, int):
+                    print(f"DEBUG: Converting unit system to integer: {unit_system}", file=sys.stderr)
+                    unit_system = 1  # Default to US units if not parseable
+                
                 print(f"DEBUG: Found unit system in metadata: {unit_system}", file=sys.stderr)
                 return unit_system
             else:
@@ -439,6 +447,16 @@ class Cursor(weedb.Cursor):
             usunits_index = next((i for i, col in enumerate(columns) if col.lower() == 'usunits'), None)
             if usunits_index is not None:
                 usunits_value = sql_tuple[usunits_index]
+                
+                # FIXME: this is hacky, but it works for now
+                # Make sure unit system is an integer between 0-255
+                if isinstance(usunits_value, str) and usunits_value.isdigit():
+                    usunits_value = int(usunits_value)
+                
+                # Validate the unit system value
+                if not isinstance(usunits_value, int) or usunits_value > 255:
+                    usunits_value = 1  # Default to US units (0x01)
+                    
                 print(f"DEBUG: Setting unit system to: {usunits_value}", file=sys.stderr)
                 
                 # Write a special record for unit system tracking
