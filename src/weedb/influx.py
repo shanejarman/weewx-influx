@@ -415,8 +415,8 @@ class Cursor(weedb.Cursor):
             print(f"DEBUG: Error - Could not extract columns and values", file=sys.stderr)
             raise weedb.OperationalError("Invalid INSERT statement format")
         
-        # Get column names
-        columns = [col.strip() for col in columns_match.group(1).split(',')]
+        # Get column names and strip any backticks
+        columns = [col.strip().strip('`') for col in columns_match.group(1).split(',')]
         print(f"DEBUG: Columns: {columns}", file=sys.stderr)
         
         # Get placeholders and check if they match the provided values
